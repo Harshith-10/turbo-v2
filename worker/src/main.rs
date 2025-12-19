@@ -9,14 +9,15 @@ mod docker;
 mod grpc;
 mod metrics;
 
+mod config;
+
+use config::WorkerConfig;
 use docker::DockerExecutor;
 use grpc::GrpcClient;
 use std::sync::Arc;
 use tracing::{error, info, Level};
 use tracing_subscriber::FmtSubscriber;
 use uuid::Uuid;
-
-const DEFAULT_MASTER_ADDR: &str = "http://172.16.7.253:50051";
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -27,15 +28,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .finish();
     tracing::subscriber::set_global_default(subscriber)?;
 
+    // Load configuration
+    let config = WorkerConfig::from_env();
+
     // Generate unique worker ID
     let worker_id = Uuid::new_v4().to_string();
     info!(worker_id = %worker_id, "Starting Worker Node...");
-
-    // Get master address from environment or use default
-    let master_addr = std::env::var("MASTER_ADDR").unwrap_or_else(|_| DEFAULT_MASTER_ADDR.to_string());
+    info!(master_addr = %config.master_addr, "Configuration loaded");
 
     // Initialize Docker executor
-    let docker = match DockerExecutor::new() {
+    let docker = match DockerExecutor::new(config.clone()) {
         Ok(d) => Arc::new(d),
         Err(e) => {
             error!("Failed to connect to Docker: {}", e);
@@ -47,7 +49,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Docker connection established");
 
     // Create and run gRPC client
-    let mut client = GrpcClient::new(worker_id, master_addr, docker);
+    let mut client = GrpcClient::new(worker_id, config.clone(), docker);
     client.run().await;
 
     Ok(())

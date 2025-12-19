@@ -2,7 +2,7 @@
 //!
 //! Handles bidirectional streaming connections from workers.
 
-use crate::state::{AppState, FinalResponse, JobState, WorkerInfo};
+use crate::state::{AppState, FinalResponse, JobState, JobUpdate, WorkerInfo};
 use common::scheduler::{
     worker_message::Payload, worker_service_server::WorkerService, MasterCommand, WorkerMessage,
 };
@@ -145,6 +145,12 @@ async fn handle_compile_result(state: &AppState, result: common::scheduler::Comp
                 job.binary = Some(result.binary_payload.clone());
                 job.state = JobState::Executing { pending_batches: 1 };
                 
+                // Publish update
+                state.pub_sub.publish(job_id.clone(), JobUpdate::Compiled {
+                    success: true,
+                    output: Some(result.compiler_output.clone()),
+                });
+                
                 // Gather info needed for dispatch
                 Some((
                     job.language.clone(),
@@ -156,6 +162,19 @@ async fn handle_compile_result(state: &AppState, result: common::scheduler::Comp
             } else {
                 // Compilation failed - complete the job with error
                 job.state = JobState::Completed;
+                
+                state.pub_sub.publish(job_id.clone(), JobUpdate::Compiled {
+                    success: false,
+                    output: Some(result.compiler_output.clone()),
+                });
+                state.pub_sub.publish(job_id.clone(), JobUpdate::Completed(FinalResponse::from_results(
+                    job_id.clone(),
+                    false,
+                    vec![],
+                    Some(result.compiler_output.clone()),
+                    Some("Compilation failed".to_string()),
+                )));
+                
                 None
             }
         } else {
@@ -209,7 +228,12 @@ async fn handle_compile_result(state: &AppState, result: common::scheduler::Comp
 async fn handle_batch_result(state: &AppState, result: common::scheduler::BatchExecutionResult) {
     if let Some(mut job) = state.jobs.get_mut(&result.job_id) {
         // Append results
-        job.results.extend(result.results);
+        job.results.extend(result.results.clone());
+
+        // Publish individual results
+        for res in &result.results {
+            state.pub_sub.publish(result.job_id.clone(), JobUpdate::Result(res.clone().into()));
+        }
 
         // Check if this was a system error
         if !result.system_error.is_empty() {
@@ -222,23 +246,34 @@ async fn handle_batch_result(state: &AppState, result: common::scheduler::BatchE
         }
 
         // Decrement pending batches
-        if let JobState::Executing { pending_batches } = &mut job.state {
-            *pending_batches = pending_batches.saturating_sub(1);
-
-            if *pending_batches == 0 {
-                // All batches complete
-                job.state = JobState::Completed;
-
-                if let Some(responder) = job.responder.take() {
-                    let _ = responder.send(FinalResponse {
-                        job_id: result.job_id,
-                        success: true,
-                        results: job.results.clone(),
-                        compiler_output: job.compiler_output.clone(),
-                        error: None,
-                    });
+                let total = job.total_test_cases;
+                if let JobState::Executing { pending_batches } = &mut job.state {
+                    *pending_batches = pending_batches.saturating_sub(1);
+        
+                    if *pending_batches == 0 {
+                        // All batches complete
+                        job.state = JobState::Completed;
+        
+                        if let Some(responder) = job.responder.take() {
+                            let final_response = FinalResponse::from_results(
+                                result.job_id.clone(),
+                                true,
+                                job.results.clone(),
+                                job.compiler_output.clone(),
+                                None,
+                            );
+                    
+                    state.pub_sub.publish(result.job_id.clone(), JobUpdate::Completed(final_response.clone()));
+                    let _ = responder.send(final_response);
                 }
+            } else {
+                 // Publish progress update
+                 state.pub_sub.publish(result.job_id.clone(), JobUpdate::Executing {
+                     completed: total.saturating_sub(*pending_batches * 1), // approximate if batches > 1 case
+                     total,
+                 });
             }
+
         }
     }
 }

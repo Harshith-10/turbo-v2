@@ -2,20 +2,77 @@
 //! 
 //! Provides thread-safe state containers for workers and jobs using DashMap.
 
+use crate::rusq::BroadcastEngine;
 use common::scheduler::{MasterCommand, TestCaseResult};
 use dashmap::DashMap;
+use serde::Serialize;
 use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot};
 
+#[derive(Debug, Clone, Serialize)]
+pub struct SerializableTestCaseResult {
+    pub test_id: String,
+    pub status: String,
+    pub time_ms: i32,
+    pub memory_bytes: i32,
+    pub stdout: String,
+    pub stderr: String,
+}
+
+impl From<TestCaseResult> for SerializableTestCaseResult {
+    fn from(r: TestCaseResult) -> Self {
+        Self {
+            test_id: r.test_id,
+            status: r.status,
+            time_ms: r.time_ms,
+            memory_bytes: r.memory_bytes,
+            stdout: r.stdout,
+            stderr: r.stderr,
+        }
+    }
+}
+
+
+/// Updates sent to SSE clients
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "type", content = "data")]
+pub enum JobUpdate {
+    Compiling,
+    Compiled { success: bool, output: Option<String> },
+    Executing { completed: usize, total: usize },
+    Result(SerializableTestCaseResult),
+    Completed(FinalResponse),
+    Error(String),
+}
+
 /// Final response sent back to HTTP client
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct FinalResponse {
     pub job_id: String,
     pub success: bool,
-    pub results: Vec<TestCaseResult>,
+    pub results: Vec<SerializableTestCaseResult>,
     pub compiler_output: Option<String>,
     pub error: Option<String>,
 }
+
+impl FinalResponse {
+    pub fn from_results(
+        job_id: String,
+        success: bool,
+        results: Vec<TestCaseResult>,
+        compiler_output: Option<String>,
+        error: Option<String>,
+    ) -> Self {
+        Self {
+            job_id,
+            success,
+            results: results.into_iter().map(Into::into).collect(),
+            compiler_output,
+            error,
+        }
+    }
+}
+
 
 /// Current state of a job in the pipeline
 #[derive(Debug, Clone)]
@@ -49,6 +106,8 @@ pub struct JobContext {
     pub time_limit_ms: u32,
     /// Memory limit per test case in MB
     pub memory_limit_mb: u32,
+    /// Timestamp when job was created (for GC)
+    pub created_at: std::time::Instant,
 }
 
 /// Worker connection info
@@ -76,19 +135,25 @@ pub struct AppState {
     pub workers: Arc<DashMap<String, WorkerInfo>>,
     /// Active jobs: JobID -> JobContext
     pub jobs: Arc<DashMap<String, JobContext>>,
+    /// Pub/Sub engine for job updates
+    pub pub_sub: Arc<BroadcastEngine<JobUpdate>>,
 }
 
+use crate::config::MasterConfig;
+
 impl AppState {
-    pub fn new() -> Self {
+    pub fn new(config: &MasterConfig) -> Self {
         Self {
             workers: Arc::new(DashMap::new()),
             jobs: Arc::new(DashMap::new()),
+            pub_sub: Arc::new(BroadcastEngine::new(config.pubsub_capacity)),
         }
     }
 }
 
 impl Default for AppState {
     fn default() -> Self {
-        Self::new()
+        let config = MasterConfig::from_env();
+        Self::new(&config)
     }
 }

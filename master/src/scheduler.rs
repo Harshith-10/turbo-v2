@@ -9,7 +9,7 @@ use common::scheduler::{
 use tracing::info;
 
 /// Batch size for distributing test cases
-const BATCH_SIZE: usize = 20;
+const BATCH_SIZE: usize = 50;
 
 /// Select a worker capable of compilation (has "can_compile" tag and low load)
 pub fn select_compile_worker(state: &AppState) -> Option<String> {

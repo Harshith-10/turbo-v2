@@ -2,7 +2,7 @@
 //!
 //! Provides REST API for clients to submit code and check job status.
 
-use crate::state::{AppState, FinalResponse, JobContext, JobState};
+use crate::state::{AppState, FinalResponse, JobContext, JobState, JobUpdate};
 use axum::{
     extract::{Path, State},
     http::StatusCode,
@@ -15,6 +15,63 @@ use serde::{Deserialize, Serialize};
 use tokio::sync::oneshot;
 use tracing::info;
 use uuid::Uuid;
+use axum::response::sse::{Event, KeepAlive, Sse};
+use tokio_stream::wrappers::BroadcastStream;
+use futures::stream::StreamExt;
+use tokio_stream::wrappers::errors::BroadcastStreamRecvError;
+
+async fn get_job_status(
+    State(state): State<AppState>,
+    Path(job_id): Path<String>,
+) -> impl IntoResponse {
+    // Check if job exists first
+    let (initial_state, rx) = if let Some(job) = state.jobs.get(&job_id) {
+        let current_state_update = match &job.state {
+            JobState::Compiling => JobUpdate::Compiling,
+            JobState::Executing { pending_batches, .. } => JobUpdate::Executing { 
+                completed: job.total_test_cases.saturating_sub(pending_batches * 1), /* approximate */
+                total: job.total_test_cases 
+            },
+            JobState::Completed => {
+                 JobUpdate::Error("Job already completed, please check results via standard API if needed (TODO)".to_string())
+            }
+        };
+        (Some(current_state_update), state.pub_sub.subscribe(job_id.clone()))
+    } else {
+        (None, state.pub_sub.subscribe(job_id.clone()))
+    };
+
+    // Convert BroadcastStream items to SSE Events
+    let stream = BroadcastStream::new(rx).map(move |item| {
+        match item {
+            Ok(update) => {
+                match serde_json::to_string(&update) {
+                    Ok(json) => Ok::<_, axum::Error>(Event::default().data(json)),
+                    Err(_) => Ok::<_, axum::Error>(Event::default().event("error").data("serialization error")),
+                }
+            },
+            Err(BroadcastStreamRecvError::Lagged(_)) => Ok::<_, axum::Error>(Event::default().event("error").data("stream lagged")),
+        }
+    });
+
+    // If we have an initial state, prefix it to the stream
+    let final_stream = if let Some(initial) = initial_state {
+        let initial_event = match serde_json::to_string(&initial) {
+            Ok(json) => Ok::<_, axum::Error>(Event::default().data(json)),
+            Err(_) => Ok::<_, axum::Error>(Event::default().event("error").data("serialization error")),
+        };
+        // Use tokio_stream::once for the initial item and chain the rest
+        tokio_stream::once(initial_event).chain(stream).boxed()
+    } else {
+        stream.boxed()
+    };
+
+    Sse::new(final_stream)
+        .keep_alive(KeepAlive::default())
+        .into_response()
+}
+
+
 
 /// Request body for code submission
 #[derive(Debug, Deserialize)]
@@ -146,7 +203,7 @@ async fn submit_job(
     // Determine initial state based on language type
     let initial_state = if is_interpreted {
         JobState::Executing {
-            pending_batches: 1, // Single batch for now
+            pending_batches: 0, // Will be updated on dispatch
         }
     } else {
         JobState::Compiling
@@ -165,7 +222,9 @@ async fn submit_job(
         responder: Some(tx),
         test_cases: proto_test_cases.clone(),
         time_limit_ms: req.time_limit_ms,
+
         memory_limit_mb: req.memory_limit_mb,
+        created_at: std::time::Instant::now(),
     };
 
     // Store job
@@ -195,26 +254,36 @@ async fn submit_job(
 
     // Dispatch to worker
     if is_interpreted {
-        // For interpreted languages, send ExecuteBatchTask directly
-        let task = common::scheduler::ExecuteBatchTask {
-            job_id: job_id.clone(),
-            batch_id: "batch_1".to_string(),
-            language: req.language.clone(),
-            payload: Some(common::scheduler::execute_batch_task::Payload::SourceCode(
-                req.source_code.clone(),
-            )),
-            inputs: proto_test_cases,
-            time_limit_ms: req.time_limit_ms,
-            memory_limit_mb: req.memory_limit_mb,
-        };
+        // For interpreted languages, split into batches and dispatch
+        let batches = crate::scheduler::create_batches(proto_test_cases);
+        let batch_count = batches.len();
+        
+        // Update job state before dispatching to reflect actual batch count
+        if let Some(mut job) = state.jobs.get_mut(&job_id) {
+             job.state = JobState::Executing { pending_batches: batch_count };
+        }
 
-        let cmd = common::scheduler::MasterCommand {
-            task: Some(common::scheduler::master_command::Task::Execute(task)),
-        };
+        for (i, batch) in batches.into_iter().enumerate() {
+            let task = common::scheduler::ExecuteBatchTask {
+                job_id: job_id.clone(),
+                batch_id: format!("batch_{}", i),
+                language: req.language.clone(),
+                payload: Some(common::scheduler::execute_batch_task::Payload::SourceCode(
+                    req.source_code.clone(),
+                )),
+                inputs: batch,
+                time_limit_ms: req.time_limit_ms,
+                memory_limit_mb: req.memory_limit_mb,
+            };
 
-        if let Some(worker) = state.workers.get(&worker_id) {
-            let _ = worker.sender.send(Ok(cmd)).await;
-            info!(job_id = %job_id, worker_id = %worker_id, "Dispatched execute task");
+            let cmd = common::scheduler::MasterCommand {
+                task: Some(common::scheduler::master_command::Task::Execute(task)),
+            };
+
+            if let Some(worker) = state.workers.get(&worker_id) {
+                let _ = worker.sender.send(Ok(cmd)).await;
+                info!(job_id = %job_id, worker_id = %worker_id, batch_idx = %i, "Dispatched execute batch task");
+            }
         }
     } else {
         // For compiled languages, send CompileTask first
@@ -244,46 +313,6 @@ async fn submit_job(
     )
 }
 
-async fn get_job_status(
-    State(state): State<AppState>,
-    Path(job_id): Path<String>,
-) -> impl IntoResponse {
-    if let Some(job) = state.jobs.get(&job_id) {
-        let state_str = match &job.state {
-            JobState::Compiling => "compiling",
-            JobState::Executing { pending_batches } => {
-                if *pending_batches > 0 {
-                    "executing"
-                } else {
-                    "completed"
-                }
-            }
-            JobState::Completed => "completed",
-        };
-
-        (
-            StatusCode::OK,
-            Json(StatusResponse {
-                job_id,
-                state: state_str.to_string(),
-                results: job.results.iter().cloned().map(Into::into).collect(),
-                compiler_output: job.compiler_output.clone(),
-                error: None,
-            }),
-        )
-    } else {
-        (
-            StatusCode::NOT_FOUND,
-            Json(StatusResponse {
-                job_id,
-                state: "not_found".to_string(),
-                results: vec![],
-                compiler_output: None,
-                error: Some("Job not found".to_string()),
-            }),
-        )
-    }
-}
 
 async fn list_workers(State(state): State<AppState>) -> impl IntoResponse {
     let workers: Vec<_> = state

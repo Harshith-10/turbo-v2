@@ -1,0 +1,21 @@
+{
+  "config": {
+    "jobs_per_user": 10,
+    "url": "http://127.0.0.1:8080",
+    "users": 10
+  },
+  "results": {
+    "failed_jobs": 0,
+    "submission_latency": {
+      "p50": 0,
+      "p95": 0,
+      "p99": 0
+    },
+    "total_jobs": 100,
+    "turnaround_time": {
+      "p50": 1301,
+      "p95": 2607,
+      "p99": 2607
+    }
+  }
+}

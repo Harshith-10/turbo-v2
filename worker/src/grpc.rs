@@ -17,23 +17,21 @@ use tokio_stream::wrappers::ReceiverStream;
 use tonic::transport::Channel;
 use tracing::{error, info, warn};
 
-const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
-const RECONNECT_BASE_DELAY: Duration = Duration::from_secs(2);
-const RECONNECT_MAX_DELAY: Duration = Duration::from_secs(60);
+use crate::config::WorkerConfig;
 
 pub struct GrpcClient {
     worker_id: String,
-    master_addr: String,
+    config: WorkerConfig,
     metrics: MetricsCollector,
     docker: Arc<DockerExecutor>,
     active_tasks: Arc<AtomicU32>,
 }
 
 impl GrpcClient {
-    pub fn new(worker_id: String, master_addr: String, docker: Arc<DockerExecutor>) -> Self {
+    pub fn new(worker_id: String, config: WorkerConfig, docker: Arc<DockerExecutor>) -> Self {
         Self {
             worker_id,
-            master_addr,
+            config,
             metrics: MetricsCollector::new(),
             docker,
             active_tasks: Arc::new(AtomicU32::new(0)),
@@ -46,7 +44,7 @@ impl GrpcClient {
 
         loop {
             info!(
-                master = %self.master_addr,
+                master = %self.config.master_addr,
                 "Connecting to Master..."
             );
 
@@ -62,8 +60,8 @@ impl GrpcClient {
 
             // Exponential backoff with jitter
             let delay = std::cmp::min(
-                RECONNECT_BASE_DELAY * 2u32.pow(retry_count),
-                RECONNECT_MAX_DELAY,
+                self.config.reconnect_base_delay * 2u32.pow(retry_count),
+                self.config.reconnect_max_delay,
             );
             let jitter = Duration::from_millis(rand_jitter(500));
 
@@ -79,7 +77,7 @@ impl GrpcClient {
     }
 
     async fn connect_and_process(&mut self) -> Result<(), Box<dyn std::error::Error>> {
-        let channel = Channel::from_shared(self.master_addr.clone())?
+        let channel = Channel::from_shared(self.config.master_addr.clone())?
             .connect()
             .await?;
 
@@ -110,9 +108,10 @@ impl GrpcClient {
         let heartbeat_tx = tx.clone();
         let worker_id = self.worker_id.clone();
         let active_tasks_hb = Arc::clone(&self.active_tasks);
+        let heartbeat_interval = self.config.heartbeat_interval;
         let mut metrics = MetricsCollector::new();
         let heartbeat_handle = tokio::spawn(async move {
-            let mut interval = interval(HEARTBEAT_INTERVAL);
+            let mut interval = interval(heartbeat_interval);
             loop {
                 interval.tick().await;
                 metrics.refresh();
