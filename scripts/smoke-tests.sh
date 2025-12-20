@@ -12,7 +12,7 @@
 
 set -e
 
-MASTER_URL="${MASTER_URL:-http://127.0.0.1:8080}"
+MASTER_URL="${MASTER_URL:-http://172.16.7.253:8080}"
 
 # Colors for output
 RED='\033[0;31m'

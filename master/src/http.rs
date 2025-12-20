@@ -36,7 +36,16 @@ async fn get_job_status(
                 total: job.total_test_cases
             },
             JobState::Completed => {
-                JobUpdate::Error("Job already completed, please check results via standard API if needed (TODO)".to_string())
+                // Job already finished - return the final results
+                let all_passed = job.results.iter().all(|r| r.status == "PASSED");
+                let final_response = FinalResponse::from_results(
+                    job.id.clone(),
+                    all_passed,
+                    job.results.clone(),
+                    job.compiler_output.clone(),
+                    None,
+                );
+                JobUpdate::Completed(final_response)
             }
         });
     }
