@@ -224,10 +224,18 @@ async fn submit_job(
     // Create oneshot channel for response
     let (tx, _rx) = oneshot::channel::<FinalResponse>();
 
+    // Pre-compute batches for interpreted languages to set correct pending_batches from start
+    // This prevents race condition where worker completes before pending_batches is updated
+    let batches: Option<Vec<Vec<common::scheduler::TestCase>>> = if is_interpreted {
+        Some(crate::scheduler::create_batches(proto_test_cases.clone()))
+    } else {
+        None
+    };
+
     // Determine initial state based on language type
     let initial_state = if is_interpreted {
         JobState::Executing {
-            pending_batches: 0, // Will be updated on dispatch
+            pending_batches: batches.as_ref().map(|b| b.len()).unwrap_or(1),
         }
     } else {
         JobState::Compiling
@@ -246,12 +254,11 @@ async fn submit_job(
         responder: Some(tx),
         test_cases: proto_test_cases.clone(),
         time_limit_ms: req.time_limit_ms,
-
         memory_limit_mb: req.memory_limit_mb,
         created_at: std::time::Instant::now(),
     };
 
-    // Store job
+    // Store job with correct pending_batches already set
     state.jobs.insert(job_id.clone(), job);
 
     // Find a suitable worker (least loaded)
@@ -277,15 +284,8 @@ async fn submit_job(
     };
 
     // Dispatch to worker
-    if is_interpreted {
-        // For interpreted languages, split into batches and dispatch
-        let batches = crate::scheduler::create_batches(proto_test_cases);
-        let batch_count = batches.len();
-        
-        // Update job state before dispatching to reflect actual batch count
-        if let Some(mut job) = state.jobs.get_mut(&job_id) {
-             job.state = JobState::Executing { pending_batches: batch_count };
-        }
+    if let Some(batches) = batches {
+        // Interpreted languages: dispatch pre-computed batches
 
         for (i, batch) in batches.into_iter().enumerate() {
             let task = common::scheduler::ExecuteBatchTask {
