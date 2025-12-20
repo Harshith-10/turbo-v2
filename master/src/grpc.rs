@@ -248,36 +248,44 @@ async fn handle_batch_result(state: &AppState, result: common::scheduler::BatchE
         }
 
         // Decrement pending batches
-                let total = job.total_test_cases;
-                if let JobState::Executing { pending_batches } = &mut job.state {
-                    *pending_batches = pending_batches.saturating_sub(1);
-        
-                    if *pending_batches == 0 {
-                        // All batches complete
-                        job.state = JobState::Completed;
-        
-                        if let Some(responder) = job.responder.take() {
-                            // Check if all tests passed
-                            let all_passed = job.results.iter().all(|r| r.status == "PASSED");
-                            let final_response = FinalResponse::from_results(
-                                result.job_id.clone(),
-                                all_passed,
-                                job.results.clone(),
-                                job.compiler_output.clone(),
-                                None,
-                            );
-                    
-                    state.pub_sub.publish(format!("job:{}", result.job_id), JobUpdate::Completed(final_response.clone()));
+        let total = job.total_test_cases;
+        if let JobState::Executing { pending_batches } = &mut job.state {
+            *pending_batches = pending_batches.saturating_sub(1);
+
+            if *pending_batches == 0 {
+                // All batches complete
+                job.state = JobState::Completed;
+
+                // Check if all tests passed
+                let all_passed = job.results.iter().all(|r| r.status == "PASSED");
+                let final_response = FinalResponse::from_results(
+                    result.job_id.clone(),
+                    all_passed,
+                    job.results.clone(),
+                    job.compiler_output.clone(),
+                    None,
+                );
+
+                // Always publish to SSE clients
+                state.pub_sub.publish(
+                    format!("job:{}", result.job_id),
+                    JobUpdate::Completed(final_response.clone()),
+                );
+
+                // Also send to responder if it exists (for legacy HTTP polling)
+                if let Some(responder) = job.responder.take() {
                     let _ = responder.send(final_response);
                 }
             } else {
-                 // Publish progress update
-                 state.pub_sub.publish(format!("job:{}", result.job_id), JobUpdate::Executing {
-                     completed: total.saturating_sub(*pending_batches * 1), // approximate if batches > 1 case
-                     total,
-                 });
+                // Publish progress update
+                state.pub_sub.publish(
+                    format!("job:{}", result.job_id),
+                    JobUpdate::Executing {
+                        completed: total.saturating_sub(*pending_batches * 1),
+                        total,
+                    },
+                );
             }
-
         }
     }
 }
