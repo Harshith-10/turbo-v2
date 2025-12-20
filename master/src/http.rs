@@ -29,6 +29,14 @@ async fn get_job_status(
     
     // Check if job exists and get its current state
     if let Some(job) = state.jobs.get(&job_id) {
+        tracing::info!(
+            job_id = %job_id,
+            state = ?std::mem::discriminant(&job.state),
+            results_count = job.results.len(),
+            result_statuses = ?job.results.iter().map(|r| r.status.as_str()).collect::<Vec<_>>(),
+            "SSE client connected - checking job state"
+        );
+        
         initial_state = Some(match &job.state {
             JobState::Compiling => JobUpdate::Compiling,
             JobState::Executing { pending_batches, .. } => JobUpdate::Executing {
@@ -38,6 +46,11 @@ async fn get_job_status(
             JobState::Completed => {
                 // Job already finished - return the final results
                 let all_passed = job.results.iter().all(|r| r.status == "PASSED");
+                tracing::info!(
+                    job_id = %job_id,
+                    all_passed = all_passed,
+                    "Building Completed response for SSE"
+                );
                 let final_response = FinalResponse::from_results(
                     job.id.clone(),
                     all_passed,
