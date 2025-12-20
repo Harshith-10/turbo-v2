@@ -257,9 +257,11 @@ async fn handle_batch_result(state: &AppState, result: common::scheduler::BatchE
                         job.state = JobState::Completed;
         
                         if let Some(responder) = job.responder.take() {
+                            // Check if all tests passed
+                            let all_passed = job.results.iter().all(|r| r.status == "PASSED");
                             let final_response = FinalResponse::from_results(
                                 result.job_id.clone(),
-                                true,
+                                all_passed,
                                 job.results.clone(),
                                 job.compiler_output.clone(),
                                 None,
