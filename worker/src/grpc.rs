@@ -227,10 +227,6 @@ impl GrpcClient {
 
 /// Generate random jitter in milliseconds
 fn rand_jitter(max_ms: u64) -> u64 {
-    use std::time::SystemTime;
-    let nanos = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .unwrap()
-        .subsec_nanos() as u64;
-    nanos % max_ms
+    use rand::Rng;
+    rand::rng().random_range(0..max_ms)
 }

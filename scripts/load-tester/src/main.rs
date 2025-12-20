@@ -200,8 +200,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 async fn run_job(
-    user_id: usize,
-    job_seq: usize,
+    _user_id: usize,
+    _job_seq: usize,
     client: &Client,
     base_url: &str,
     metrics: &MetricsCollector,

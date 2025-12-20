@@ -11,35 +11,38 @@ use axum::{
     Json, Router,
 };
 use common::scheduler::TestCaseResult;
+use futures::StreamExt;
 use serde::{Deserialize, Serialize};
 use tokio::sync::oneshot;
 use tracing::info;
 use uuid::Uuid;
 use axum::response::sse::{Event, KeepAlive, Sse};
 use tokio_stream::wrappers::BroadcastStream;
-use futures::stream::StreamExt;
+
 use tokio_stream::wrappers::errors::BroadcastStreamRecvError;
 
 async fn get_job_status(
     State(state): State<AppState>,
     Path(job_id): Path<String>,
 ) -> impl IntoResponse {
-    // Check if job exists first
-    let (initial_state, rx) = if let Some(job) = state.jobs.get(&job_id) {
-        let current_state_update = match &job.state {
+    let mut initial_state: Option<JobUpdate> = None;
+    
+    // Check if job exists and get its current state
+    if let Some(job) = state.jobs.get(&job_id) {
+        initial_state = Some(match &job.state {
             JobState::Compiling => JobUpdate::Compiling,
-            JobState::Executing { pending_batches, .. } => JobUpdate::Executing { 
-                completed: job.total_test_cases.saturating_sub(pending_batches * 1), /* approximate */
-                total: job.total_test_cases 
+            JobState::Executing { pending_batches, .. } => JobUpdate::Executing {
+                completed: job.total_test_cases.saturating_sub(pending_batches * 1),
+                total: job.total_test_cases
             },
             JobState::Completed => {
-                 JobUpdate::Error("Job already completed, please check results via standard API if needed (TODO)".to_string())
+                JobUpdate::Error("Job already completed, please check results via standard API if needed (TODO)".to_string())
             }
-        };
-        (Some(current_state_update), state.pub_sub.subscribe(job_id.clone()))
-    } else {
-        (None, state.pub_sub.subscribe(job_id.clone()))
-    };
+        });
+    }
+    
+    // Subscribe to updates for this job (using job: prefix for pattern matching)
+    let rx = state.pub_sub.subscribe(format!("job:{}", job_id));
 
     // Convert BroadcastStream items to SSE Events
     let stream = BroadcastStream::new(rx).map(move |item| {
@@ -60,7 +63,6 @@ async fn get_job_status(
             Ok(json) => Ok::<_, axum::Error>(Event::default().data(json)),
             Err(_) => Ok::<_, axum::Error>(Event::default().event("error").data("serialization error")),
         };
-        // Use tokio_stream::once for the initial item and chain the rest
         tokio_stream::once(initial_event).chain(stream).boxed()
     } else {
         stream.boxed()

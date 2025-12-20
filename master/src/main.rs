@@ -35,7 +35,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Configuration loaded: gRPC={}, HTTP={}", config.grpc_addr, config.http_addr);
 
     // Create shared state
-    let state: AppState = AppState::new(&config);
+    let state: AppState = AppState::new(&config).await;
 
     // Start Garbage Collection Task
     let gc_state = state.clone();

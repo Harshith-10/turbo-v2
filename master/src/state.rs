@@ -5,11 +5,11 @@
 use crate::rusq::BroadcastEngine;
 use common::scheduler::{MasterCommand, TestCaseResult};
 use dashmap::DashMap;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::{mpsc, oneshot};
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SerializableTestCaseResult {
     pub test_id: String,
     pub status: String,
@@ -34,7 +34,7 @@ impl From<TestCaseResult> for SerializableTestCaseResult {
 
 
 /// Updates sent to SSE clients
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", content = "data")]
 pub enum JobUpdate {
     Compiling,
@@ -45,8 +45,12 @@ pub enum JobUpdate {
     Error(String),
 }
 
+impl JobUpdate {
+    // Helper to keep compatible with non-Deserialize if absolutely needed, but we added Deserialize
+}
+
 /// Final response sent back to HTTP client
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FinalResponse {
     pub job_id: String,
     pub success: bool,
@@ -142,18 +146,16 @@ pub struct AppState {
 use crate::config::MasterConfig;
 
 impl AppState {
-    pub fn new(config: &MasterConfig) -> Self {
+    pub async fn new(config: &MasterConfig) -> Self {
+        let pub_sub = BroadcastEngine::new(
+            &config.redis_url, 
+            config.pubsub_capacity
+        ).await;
+
         Self {
             workers: Arc::new(DashMap::new()),
             jobs: Arc::new(DashMap::new()),
-            pub_sub: Arc::new(BroadcastEngine::new(config.pubsub_capacity)),
+            pub_sub: Arc::new(pub_sub),
         }
-    }
-}
-
-impl Default for AppState {
-    fn default() -> Self {
-        let config = MasterConfig::from_env();
-        Self::new(&config)
     }
 }

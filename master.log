@@ -1,0 +1,235 @@
+   Compiling master v0.1.0 (/home/harshu/Projects/turbo-v2/master)
+warning: use of deprecated method `redis::Client::get_async_connection`: aio::Connection is deprecated. Use client::get_multiplexed_async_connection instead.
+  --> master/src/rusq.rs:74:58
+   |
+74 |                 let mut pubsub_conn = match client_clone.get_async_connection().await {
+   |                                                          ^^^^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(deprecated)]` on by default
+
+warning: struct `StatusResponse` is never constructed
+   --> master/src/http.rs:116:12
+    |
+116 | pub struct StatusResponse {
+    |            ^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: struct `TestResultOutput` is never constructed
+   --> master/src/http.rs:125:12
+    |
+125 | pub struct TestResultOutput {
+    |            ^^^^^^^^^^^^^^^^
+
+warning: field `0` is never read
+  --> master/src/rusq.rs:11:17
+   |
+11 |     Unsubscribe(String),
+   |     ----------- ^^^^^^
+   |     |
+   |     field in this variant
+   |
+help: consider changing the field to be of unit type to suppress this warning while preserving the field numbering, or remove the field
+   |
+11 -     Unsubscribe(String),
+11 +     Unsubscribe(()),
+   |
+
+warning: variant `Subscribe` is never constructed
+  --> master/src/rusq.rs:10:5
+   |
+ 9 | enum ManagerCommand {
+   |      -------------- variant in this enum
+10 |     Subscribe(String),
+   |     ^^^^^^^^^
+
+warning: variant `RunCmd` is never constructed
+  --> master/src/rusq.rs:87:21
+   |
+85 |                 enum Action {
+   |                      ------ variant in this enum
+86 |                     Continue,
+87 |                     RunCmd(ManagerCommand),
+   |                     ^^^^^^
+
+warning: function `select_compile_worker` is never used
+  --> master/src/scheduler.rs:15:8
+   |
+15 | pub fn select_compile_worker(state: &AppState) -> Option<String> {
+   |        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `select_execution_workers` is never used
+  --> master/src/scheduler.rs:33:8
+   |
+33 | pub fn select_execution_workers(state: &AppState, count: usize) -> Vec<String> {
+   |        ^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `dispatch_compile_task` is never used
+  --> master/src/scheduler.rs:53:14
+   |
+53 | pub async fn dispatch_compile_task(
+   |              ^^^^^^^^^^^^^^^^^^^^^
+
+warning: function `dispatch_execute_task` is never used
+  --> master/src/scheduler.rs:92:14
+   |
+92 | pub async fn dispatch_execute_task(
+   |              ^^^^^^^^^^^^^^^^^^^^^
+
+warning: `master` (bin "master") generated 10 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.06s
+     Running `target/debug/master`
+[2m2025-12-20T06:41:56.595059Z[0m [32m INFO[0m [2mmaster[0m[2m:[0m Starting Master Node...
+[2m2025-12-20T06:41:56.595084Z[0m [32m INFO[0m [2mmaster[0m[2m:[0m Configuration loaded: gRPC=0.0.0.0:50051, HTTP=0.0.0.0:8080
+[2m2025-12-20T06:41:56.596395Z[0m [32m INFO[0m [2mmaster::rusq[0m[2m:[0m Starting Redis Publisher Task
+[2m2025-12-20T06:41:56.596422Z[0m [32m INFO[0m [2mmaster::rusq[0m[2m:[0m Starting Redis Pub/Sub Manager
+[2m2025-12-20T06:41:56.596467Z[0m [32m INFO[0m [2mmaster[0m[2m:[0m gRPC server listening on 0.0.0.0:50051
+[2m2025-12-20T06:41:56.596643Z[0m [32m INFO[0m [2mmaster[0m[2m:[0m HTTP server listening on 0.0.0.0:8080
+[2m2025-12-20T06:41:56.596966Z[0m [32m INFO[0m [2mmaster::rusq[0m[2m:[0m Manager connected to Redis Pub/Sub
+[2m2025-12-20T06:42:00.678223Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Worker registered [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_cores[0m[2m=[0m20 [3mram_mb[0m[2m=[0m23798 [3mtags[0m[2m=[0m["can_compile"]
+[2m2025-12-20T06:42:00.714034Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m0.0 [3mram_mb[0m[2m=[0m7685 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:42:05.714911Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m4.182591438293457 [3mram_mb[0m[2m=[0m7643 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:42:08.523911Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Job submitted [3mjob_id[0m[2m=[0m8b82af54-1459-41c7-a126-58eb8ba7c985 [3mlanguage[0m[2m=[0mpython [3mtest_cases[0m[2m=[0m1
+[2m2025-12-20T06:42:08.524048Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Dispatched execute batch task [3mjob_id[0m[2m=[0m8b82af54-1459-41c7-a126-58eb8ba7c985 [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mbatch_idx[0m[2m=[0m0
+[2m2025-12-20T06:42:09.093496Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Batch execution result received [3mjob_id[0m[2m=[0m8b82af54-1459-41c7-a126-58eb8ba7c985 [3mbatch_id[0m[2m=[0mbatch_0 [3mnum_results[0m[2m=[0m1
+[2m2025-12-20T06:42:09.108114Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Job submitted [3mjob_id[0m[2m=[0mb18fba4b-89d4-4a7f-98ee-287d687b09e2 [3mlanguage[0m[2m=[0mpython [3mtest_cases[0m[2m=[0m1
+[2m2025-12-20T06:42:09.108198Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Dispatched execute batch task [3mjob_id[0m[2m=[0mb18fba4b-89d4-4a7f-98ee-287d687b09e2 [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mbatch_idx[0m[2m=[0m0
+[2m2025-12-20T06:42:09.752272Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Batch execution result received [3mjob_id[0m[2m=[0mb18fba4b-89d4-4a7f-98ee-287d687b09e2 [3mbatch_id[0m[2m=[0mbatch_0 [3mnum_results[0m[2m=[0m1
+[2m2025-12-20T06:42:09.770919Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Job submitted [3mjob_id[0m[2m=[0m4bebe37f-fd36-47c8-ba13-6d9e11380375 [3mlanguage[0m[2m=[0mpython [3mtest_cases[0m[2m=[0m1
+[2m2025-12-20T06:42:09.771042Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Dispatched execute batch task [3mjob_id[0m[2m=[0m4bebe37f-fd36-47c8-ba13-6d9e11380375 [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mbatch_idx[0m[2m=[0m0
+[2m2025-12-20T06:42:10.714046Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m7.030200958251953 [3mram_mb[0m[2m=[0m7719 [3mactive_tasks[0m[2m=[0m1
+[2m2025-12-20T06:42:12.261483Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Batch execution result received [3mjob_id[0m[2m=[0m4bebe37f-fd36-47c8-ba13-6d9e11380375 [3mbatch_id[0m[2m=[0mbatch_0 [3mnum_results[0m[2m=[0m1
+[2m2025-12-20T06:42:12.277622Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Job submitted [3mjob_id[0m[2m=[0m267ad88c-ad64-451c-a8da-088f19147c49 [3mlanguage[0m[2m=[0mjavascript [3mtest_cases[0m[2m=[0m1
+[2m2025-12-20T06:42:12.277705Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Dispatched execute batch task [3mjob_id[0m[2m=[0m267ad88c-ad64-451c-a8da-088f19147c49 [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mbatch_idx[0m[2m=[0m0
+[2m2025-12-20T06:42:12.861282Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Batch execution result received [3mjob_id[0m[2m=[0m267ad88c-ad64-451c-a8da-088f19147c49 [3mbatch_id[0m[2m=[0mbatch_0 [3mnum_results[0m[2m=[0m1
+[2m2025-12-20T06:42:15.714360Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m6.723569393157959 [3mram_mb[0m[2m=[0m7712 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:42:20.714332Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m5.993534564971924 [3mram_mb[0m[2m=[0m7658 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:42:23.110476Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Job submitted [3mjob_id[0m[2m=[0me1d3f15c-f793-483e-9b9a-d389703e756f [3mlanguage[0m[2m=[0mpython [3mtest_cases[0m[2m=[0m1
+[2m2025-12-20T06:42:23.110591Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Dispatched execute batch task [3mjob_id[0m[2m=[0me1d3f15c-f793-483e-9b9a-d389703e756f [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mbatch_idx[0m[2m=[0m0
+[2m2025-12-20T06:42:23.651074Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Batch execution result received [3mjob_id[0m[2m=[0me1d3f15c-f793-483e-9b9a-d389703e756f [3mbatch_id[0m[2m=[0mbatch_0 [3mnum_results[0m[2m=[0m1
+[2m2025-12-20T06:42:23.667579Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Job submitted [3mjob_id[0m[2m=[0mcd820f64-f575-4775-bc1f-35403bf53f54 [3mlanguage[0m[2m=[0mpython [3mtest_cases[0m[2m=[0m1
+[2m2025-12-20T06:42:23.667693Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Dispatched execute batch task [3mjob_id[0m[2m=[0mcd820f64-f575-4775-bc1f-35403bf53f54 [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mbatch_idx[0m[2m=[0m0
+[2m2025-12-20T06:42:24.363194Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Batch execution result received [3mjob_id[0m[2m=[0mcd820f64-f575-4775-bc1f-35403bf53f54 [3mbatch_id[0m[2m=[0mbatch_0 [3mnum_results[0m[2m=[0m1
+[2m2025-12-20T06:42:24.380126Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Job submitted [3mjob_id[0m[2m=[0m029887fb-f9aa-4f00-8b72-6fb532edccba [3mlanguage[0m[2m=[0mpython [3mtest_cases[0m[2m=[0m1
+[2m2025-12-20T06:42:24.380211Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Dispatched execute batch task [3mjob_id[0m[2m=[0m029887fb-f9aa-4f00-8b72-6fb532edccba [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mbatch_idx[0m[2m=[0m0
+[2m2025-12-20T06:42:25.714808Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m7.743863105773926 [3mram_mb[0m[2m=[0m7453 [3mactive_tasks[0m[2m=[0m1
+[2m2025-12-20T06:42:26.903528Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Batch execution result received [3mjob_id[0m[2m=[0m029887fb-f9aa-4f00-8b72-6fb532edccba [3mbatch_id[0m[2m=[0mbatch_0 [3mnum_results[0m[2m=[0m1
+[2m2025-12-20T06:42:26.918915Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Job submitted [3mjob_id[0m[2m=[0me67286be-930f-492d-8ba7-9f711e1a232e [3mlanguage[0m[2m=[0mjavascript [3mtest_cases[0m[2m=[0m1
+[2m2025-12-20T06:42:26.919009Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Dispatched execute batch task [3mjob_id[0m[2m=[0me67286be-930f-492d-8ba7-9f711e1a232e [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mbatch_idx[0m[2m=[0m0
+[2m2025-12-20T06:42:27.419117Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Batch execution result received [3mjob_id[0m[2m=[0me67286be-930f-492d-8ba7-9f711e1a232e [3mbatch_id[0m[2m=[0mbatch_0 [3mnum_results[0m[2m=[0m1
+[2m2025-12-20T06:42:27.434149Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Job submitted [3mjob_id[0m[2m=[0m4f0aaa42-0b69-46e9-a6d5-df7de65271f8 [3mlanguage[0m[2m=[0mjavascript [3mtest_cases[0m[2m=[0m1
+[2m2025-12-20T06:42:27.434228Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Dispatched execute batch task [3mjob_id[0m[2m=[0m4f0aaa42-0b69-46e9-a6d5-df7de65271f8 [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mbatch_idx[0m[2m=[0m0
+[2m2025-12-20T06:42:27.954754Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Batch execution result received [3mjob_id[0m[2m=[0m4f0aaa42-0b69-46e9-a6d5-df7de65271f8 [3mbatch_id[0m[2m=[0mbatch_0 [3mnum_results[0m[2m=[0m1
+[2m2025-12-20T06:42:27.970895Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Job submitted [3mjob_id[0m[2m=[0ma3f88a02-f8ec-453f-99f9-768d6889b972 [3mlanguage[0m[2m=[0mruby [3mtest_cases[0m[2m=[0m1
+[2m2025-12-20T06:42:27.971003Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Dispatched execute batch task [3mjob_id[0m[2m=[0ma3f88a02-f8ec-453f-99f9-768d6889b972 [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mbatch_idx[0m[2m=[0m0
+[2m2025-12-20T06:42:28.514388Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Batch execution result received [3mjob_id[0m[2m=[0ma3f88a02-f8ec-453f-99f9-768d6889b972 [3mbatch_id[0m[2m=[0mbatch_0 [3mnum_results[0m[2m=[0m1
+[2m2025-12-20T06:42:28.530073Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Job submitted [3mjob_id[0m[2m=[0m5e5754c3-8aa5-4422-bb77-51eeb61df1d9 [3mlanguage[0m[2m=[0mc [3mtest_cases[0m[2m=[0m1
+[2m2025-12-20T06:42:28.530190Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Dispatched compile task [3mjob_id[0m[2m=[0m5e5754c3-8aa5-4422-bb77-51eeb61df1d9 [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5
+[2m2025-12-20T06:42:29.140222Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Compile result received [3mjob_id[0m[2m=[0m5e5754c3-8aa5-4422-bb77-51eeb61df1d9 [3msuccess[0m[2m=[0mtrue [3mduration_ms[0m[2m=[0m606
+[2m2025-12-20T06:42:29.141098Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Compilation successful, dispatching execution phase [3mjob_id[0m[2m=[0m5e5754c3-8aa5-4422-bb77-51eeb61df1d9
+[2m2025-12-20T06:42:29.141175Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Dispatched execute task with binary [3mjob_id[0m[2m=[0m5e5754c3-8aa5-4422-bb77-51eeb61df1d9 [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5
+[2m2025-12-20T06:42:29.641557Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Batch execution result received [3mjob_id[0m[2m=[0m5e5754c3-8aa5-4422-bb77-51eeb61df1d9 [3mbatch_id[0m[2m=[0mbatch_1 [3mnum_results[0m[2m=[0m1
+[2m2025-12-20T06:42:29.655749Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Job submitted [3mjob_id[0m[2m=[0mf09fd917-1a17-4360-9dbf-46525daaa816 [3mlanguage[0m[2m=[0mc [3mtest_cases[0m[2m=[0m1
+[2m2025-12-20T06:42:29.655829Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Dispatched compile task [3mjob_id[0m[2m=[0mf09fd917-1a17-4360-9dbf-46525daaa816 [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5
+[2m2025-12-20T06:42:30.104059Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Compile result received [3mjob_id[0m[2m=[0mf09fd917-1a17-4360-9dbf-46525daaa816 [3msuccess[0m[2m=[0mfalse [3mduration_ms[0m[2m=[0m447
+[2m2025-12-20T06:42:30.104114Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Compilation failed [3mjob_id[0m[2m=[0mf09fd917-1a17-4360-9dbf-46525daaa816
+[2m2025-12-20T06:42:30.118056Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Job submitted [3mjob_id[0m[2m=[0m4ebfe6e8-10c5-4cc7-b7f6-63ccfd0a7842 [3mlanguage[0m[2m=[0mc [3mtest_cases[0m[2m=[0m1
+[2m2025-12-20T06:42:30.118131Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Dispatched compile task [3mjob_id[0m[2m=[0m4ebfe6e8-10c5-4cc7-b7f6-63ccfd0a7842 [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5
+[2m2025-12-20T06:42:30.631078Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Compile result received [3mjob_id[0m[2m=[0m4ebfe6e8-10c5-4cc7-b7f6-63ccfd0a7842 [3msuccess[0m[2m=[0mtrue [3mduration_ms[0m[2m=[0m511
+[2m2025-12-20T06:42:30.631671Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Compilation successful, dispatching execution phase [3mjob_id[0m[2m=[0m4ebfe6e8-10c5-4cc7-b7f6-63ccfd0a7842
+[2m2025-12-20T06:42:30.631715Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Dispatched execute task with binary [3mjob_id[0m[2m=[0m4ebfe6e8-10c5-4cc7-b7f6-63ccfd0a7842 [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5
+[2m2025-12-20T06:42:30.714901Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m6.3747029304504395 [3mram_mb[0m[2m=[0m7445 [3mactive_tasks[0m[2m=[0m1
+[2m2025-12-20T06:42:31.185764Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Batch execution result received [3mjob_id[0m[2m=[0m4ebfe6e8-10c5-4cc7-b7f6-63ccfd0a7842 [3mbatch_id[0m[2m=[0mbatch_1 [3mnum_results[0m[2m=[0m1
+[2m2025-12-20T06:42:31.200331Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Job submitted [3mjob_id[0m[2m=[0m0653f40c-7d82-4d23-a93a-02238cd499bb [3mlanguage[0m[2m=[0mcpp [3mtest_cases[0m[2m=[0m1
+[2m2025-12-20T06:42:31.200408Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Dispatched compile task [3mjob_id[0m[2m=[0m0653f40c-7d82-4d23-a93a-02238cd499bb [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5
+[2m2025-12-20T06:42:31.968252Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Compile result received [3mjob_id[0m[2m=[0m0653f40c-7d82-4d23-a93a-02238cd499bb [3msuccess[0m[2m=[0mtrue [3mduration_ms[0m[2m=[0m762
+[2m2025-12-20T06:42:31.969820Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Compilation successful, dispatching execution phase [3mjob_id[0m[2m=[0m0653f40c-7d82-4d23-a93a-02238cd499bb
+[2m2025-12-20T06:42:31.969862Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Dispatched execute task with binary [3mjob_id[0m[2m=[0m0653f40c-7d82-4d23-a93a-02238cd499bb [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5
+[2m2025-12-20T06:42:32.502618Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Batch execution result received [3mjob_id[0m[2m=[0m0653f40c-7d82-4d23-a93a-02238cd499bb [3mbatch_id[0m[2m=[0mbatch_1 [3mnum_results[0m[2m=[0m1
+[2m2025-12-20T06:42:32.519520Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Job submitted [3mjob_id[0m[2m=[0m13c367d1-de63-43cd-9520-3d6ad73871cc [3mlanguage[0m[2m=[0mcpp [3mtest_cases[0m[2m=[0m1
+[2m2025-12-20T06:42:32.519594Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Dispatched compile task [3mjob_id[0m[2m=[0m13c367d1-de63-43cd-9520-3d6ad73871cc [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5
+[2m2025-12-20T06:42:33.110490Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Compile result received [3mjob_id[0m[2m=[0m13c367d1-de63-43cd-9520-3d6ad73871cc [3msuccess[0m[2m=[0mfalse [3mduration_ms[0m[2m=[0m589
+[2m2025-12-20T06:42:33.110575Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Compilation failed [3mjob_id[0m[2m=[0m13c367d1-de63-43cd-9520-3d6ad73871cc
+[2m2025-12-20T06:42:33.131457Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Job submitted [3mjob_id[0m[2m=[0m0e3d0363-2880-4c58-b97b-472e823b8758 [3mlanguage[0m[2m=[0mrust [3mtest_cases[0m[2m=[0m1
+[2m2025-12-20T06:42:33.131598Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Dispatched compile task [3mjob_id[0m[2m=[0m0e3d0363-2880-4c58-b97b-472e823b8758 [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5
+[2m2025-12-20T06:42:33.949895Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Compile result received [3mjob_id[0m[2m=[0m0e3d0363-2880-4c58-b97b-472e823b8758 [3msuccess[0m[2m=[0mtrue [3mduration_ms[0m[2m=[0m813
+[2m2025-12-20T06:42:33.951502Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Compilation successful, dispatching execution phase [3mjob_id[0m[2m=[0m0e3d0363-2880-4c58-b97b-472e823b8758
+[2m2025-12-20T06:42:33.951545Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Dispatched execute task with binary [3mjob_id[0m[2m=[0m0e3d0363-2880-4c58-b97b-472e823b8758 [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5
+[2m2025-12-20T06:42:34.495764Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Batch execution result received [3mjob_id[0m[2m=[0m0e3d0363-2880-4c58-b97b-472e823b8758 [3mbatch_id[0m[2m=[0mbatch_1 [3mnum_results[0m[2m=[0m1
+[2m2025-12-20T06:42:34.511152Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Job submitted [3mjob_id[0m[2m=[0me04211e9-b32a-46c2-b401-f72d22919338 [3mlanguage[0m[2m=[0mrust [3mtest_cases[0m[2m=[0m1
+[2m2025-12-20T06:42:34.511232Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Dispatched compile task [3mjob_id[0m[2m=[0me04211e9-b32a-46c2-b401-f72d22919338 [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5
+[2m2025-12-20T06:42:35.027954Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Compile result received [3mjob_id[0m[2m=[0me04211e9-b32a-46c2-b401-f72d22919338 [3msuccess[0m[2m=[0mfalse [3mduration_ms[0m[2m=[0m515
+[2m2025-12-20T06:42:35.028006Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Compilation failed [3mjob_id[0m[2m=[0me04211e9-b32a-46c2-b401-f72d22919338
+[2m2025-12-20T06:42:35.043144Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Job submitted [3mjob_id[0m[2m=[0m32c1bc20-62ff-4b6b-a2ec-6750fe3cfcba [3mlanguage[0m[2m=[0mrust [3mtest_cases[0m[2m=[0m1
+[2m2025-12-20T06:42:35.043225Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Dispatched compile task [3mjob_id[0m[2m=[0m32c1bc20-62ff-4b6b-a2ec-6750fe3cfcba [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5
+[2m2025-12-20T06:42:35.657496Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Compile result received [3mjob_id[0m[2m=[0m32c1bc20-62ff-4b6b-a2ec-6750fe3cfcba [3msuccess[0m[2m=[0mtrue [3mduration_ms[0m[2m=[0m610
+[2m2025-12-20T06:42:35.659381Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Compilation successful, dispatching execution phase [3mjob_id[0m[2m=[0m32c1bc20-62ff-4b6b-a2ec-6750fe3cfcba
+[2m2025-12-20T06:42:35.659428Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Dispatched execute task with binary [3mjob_id[0m[2m=[0m32c1bc20-62ff-4b6b-a2ec-6750fe3cfcba [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5
+[2m2025-12-20T06:42:35.714362Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m9.736920356750488 [3mram_mb[0m[2m=[0m7404 [3mactive_tasks[0m[2m=[0m1
+[2m2025-12-20T06:42:36.173587Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Batch execution result received [3mjob_id[0m[2m=[0m32c1bc20-62ff-4b6b-a2ec-6750fe3cfcba [3mbatch_id[0m[2m=[0mbatch_1 [3mnum_results[0m[2m=[0m1
+[2m2025-12-20T06:42:36.190762Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Job submitted [3mjob_id[0m[2m=[0mb30ef76e-7d66-4d34-a48c-e3b7ffb10fc0 [3mlanguage[0m[2m=[0mgo [3mtest_cases[0m[2m=[0m1
+[2m2025-12-20T06:42:36.190889Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Dispatched compile task [3mjob_id[0m[2m=[0mb30ef76e-7d66-4d34-a48c-e3b7ffb10fc0 [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5
+[2m2025-12-20T06:42:39.885989Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Compile result received [3mjob_id[0m[2m=[0mb30ef76e-7d66-4d34-a48c-e3b7ffb10fc0 [3msuccess[0m[2m=[0mtrue [3mduration_ms[0m[2m=[0m3691
+[2m2025-12-20T06:42:39.887542Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Compilation successful, dispatching execution phase [3mjob_id[0m[2m=[0mb30ef76e-7d66-4d34-a48c-e3b7ffb10fc0
+[2m2025-12-20T06:42:39.887586Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Dispatched execute task with binary [3mjob_id[0m[2m=[0mb30ef76e-7d66-4d34-a48c-e3b7ffb10fc0 [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5
+[2m2025-12-20T06:42:40.425773Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Batch execution result received [3mjob_id[0m[2m=[0mb30ef76e-7d66-4d34-a48c-e3b7ffb10fc0 [3mbatch_id[0m[2m=[0mbatch_1 [3mnum_results[0m[2m=[0m1
+[2m2025-12-20T06:42:40.442426Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Job submitted [3mjob_id[0m[2m=[0mbf31d174-8804-445c-b5cc-122c7f14c7b8 [3mlanguage[0m[2m=[0mgo [3mtest_cases[0m[2m=[0m1
+[2m2025-12-20T06:42:40.442532Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Dispatched compile task [3mjob_id[0m[2m=[0mbf31d174-8804-445c-b5cc-122c7f14c7b8 [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5
+[2m2025-12-20T06:42:40.714582Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m10.325803756713867 [3mram_mb[0m[2m=[0m7476 [3mactive_tasks[0m[2m=[0m1
+[2m2025-12-20T06:42:42.597714Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Compile result received [3mjob_id[0m[2m=[0mbf31d174-8804-445c-b5cc-122c7f14c7b8 [3msuccess[0m[2m=[0mfalse [3mduration_ms[0m[2m=[0m2154
+[2m2025-12-20T06:42:42.597774Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Compilation failed [3mjob_id[0m[2m=[0mbf31d174-8804-445c-b5cc-122c7f14c7b8
+[2m2025-12-20T06:42:42.611830Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Job submitted [3mjob_id[0m[2m=[0m9cd3370d-de93-4b6c-b1a1-d16609b6f7d3 [3mlanguage[0m[2m=[0mjava [3mtest_cases[0m[2m=[0m1
+[2m2025-12-20T06:42:42.611914Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Dispatched compile task [3mjob_id[0m[2m=[0m9cd3370d-de93-4b6c-b1a1-d16609b6f7d3 [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5
+[2m2025-12-20T06:42:43.451155Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Compile result received [3mjob_id[0m[2m=[0m9cd3370d-de93-4b6c-b1a1-d16609b6f7d3 [3msuccess[0m[2m=[0mtrue [3mduration_ms[0m[2m=[0m838
+[2m2025-12-20T06:42:43.451215Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Compilation successful, dispatching execution phase [3mjob_id[0m[2m=[0m9cd3370d-de93-4b6c-b1a1-d16609b6f7d3
+[2m2025-12-20T06:42:43.451249Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Dispatched execute task with binary [3mjob_id[0m[2m=[0m9cd3370d-de93-4b6c-b1a1-d16609b6f7d3 [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5
+[2m2025-12-20T06:42:43.974608Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Batch execution result received [3mjob_id[0m[2m=[0m9cd3370d-de93-4b6c-b1a1-d16609b6f7d3 [3mbatch_id[0m[2m=[0mbatch_1 [3mnum_results[0m[2m=[0m1
+[2m2025-12-20T06:42:43.990610Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Job submitted [3mjob_id[0m[2m=[0m284e7d88-1fab-4181-8b7d-ae0c40e1d629 [3mlanguage[0m[2m=[0mjava [3mtest_cases[0m[2m=[0m1
+[2m2025-12-20T06:42:43.990717Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Dispatched compile task [3mjob_id[0m[2m=[0m284e7d88-1fab-4181-8b7d-ae0c40e1d629 [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5
+[2m2025-12-20T06:42:44.644829Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Compile result received [3mjob_id[0m[2m=[0m284e7d88-1fab-4181-8b7d-ae0c40e1d629 [3msuccess[0m[2m=[0mfalse [3mduration_ms[0m[2m=[0m652
+[2m2025-12-20T06:42:44.644906Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Compilation failed [3mjob_id[0m[2m=[0m284e7d88-1fab-4181-8b7d-ae0c40e1d629
+[2m2025-12-20T06:42:44.663643Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Job submitted [3mjob_id[0m[2m=[0meec00710-c31d-4767-b7cb-71c278028e9e [3mlanguage[0m[2m=[0mjava [3mtest_cases[0m[2m=[0m1
+[2m2025-12-20T06:42:44.663755Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Dispatched compile task [3mjob_id[0m[2m=[0meec00710-c31d-4767-b7cb-71c278028e9e [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5
+[2m2025-12-20T06:42:45.369608Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Compile result received [3mjob_id[0m[2m=[0meec00710-c31d-4767-b7cb-71c278028e9e [3msuccess[0m[2m=[0mtrue [3mduration_ms[0m[2m=[0m704
+[2m2025-12-20T06:42:45.369687Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Compilation successful, dispatching execution phase [3mjob_id[0m[2m=[0meec00710-c31d-4767-b7cb-71c278028e9e
+[2m2025-12-20T06:42:45.369764Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Dispatched execute task with binary [3mjob_id[0m[2m=[0meec00710-c31d-4767-b7cb-71c278028e9e [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5
+[2m2025-12-20T06:42:45.714536Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m11.501556396484375 [3mram_mb[0m[2m=[0m7503 [3mactive_tasks[0m[2m=[0m1
+[2m2025-12-20T06:42:45.896591Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Batch execution result received [3mjob_id[0m[2m=[0meec00710-c31d-4767-b7cb-71c278028e9e [3mbatch_id[0m[2m=[0mbatch_1 [3mnum_results[0m[2m=[0m1
+[2m2025-12-20T06:42:45.912922Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Job submitted [3mjob_id[0m[2m=[0m0ad0e630-a7ee-494c-a150-7f2069e31083 [3mlanguage[0m[2m=[0mpython [3mtest_cases[0m[2m=[0m1
+[2m2025-12-20T06:42:45.913050Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Dispatched execute batch task [3mjob_id[0m[2m=[0m0ad0e630-a7ee-494c-a150-7f2069e31083 [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mbatch_idx[0m[2m=[0m0
+[2m2025-12-20T06:42:46.489297Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Batch execution result received [3mjob_id[0m[2m=[0m0ad0e630-a7ee-494c-a150-7f2069e31083 [3mbatch_id[0m[2m=[0mbatch_0 [3mnum_results[0m[2m=[0m1
+[2m2025-12-20T06:42:46.504784Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Job submitted [3mjob_id[0m[2m=[0m663115c2-f19a-405c-b7aa-5662a37b12ac [3mlanguage[0m[2m=[0mpython [3mtest_cases[0m[2m=[0m3
+[2m2025-12-20T06:42:46.504889Z[0m [32m INFO[0m [2mmaster::http[0m[2m:[0m Dispatched execute batch task [3mjob_id[0m[2m=[0m663115c2-f19a-405c-b7aa-5662a37b12ac [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mbatch_idx[0m[2m=[0m0
+[2m2025-12-20T06:42:47.018456Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Batch execution result received [3mjob_id[0m[2m=[0m663115c2-f19a-405c-b7aa-5662a37b12ac [3mbatch_id[0m[2m=[0mbatch_0 [3mnum_results[0m[2m=[0m3
+[2m2025-12-20T06:42:50.714915Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m7.3148956298828125 [3mram_mb[0m[2m=[0m7642 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:42:55.715038Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m3.048252582550049 [3mram_mb[0m[2m=[0m7434 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:43:00.714901Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m2.8355672359466553 [3mram_mb[0m[2m=[0m7341 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:43:05.714813Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m3.0554823875427246 [3mram_mb[0m[2m=[0m7389 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:43:10.714836Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m2.486086130142212 [3mram_mb[0m[2m=[0m7376 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:43:15.714408Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m2.2731223106384277 [3mram_mb[0m[2m=[0m7351 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:43:20.714454Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m2.256234884262085 [3mram_mb[0m[2m=[0m7352 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:43:25.714480Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m7.15970516204834 [3mram_mb[0m[2m=[0m7568 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:43:30.714215Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m2.982913017272949 [3mram_mb[0m[2m=[0m7489 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:43:35.714617Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m4.854629039764404 [3mram_mb[0m[2m=[0m7517 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:43:40.714624Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m4.211867332458496 [3mram_mb[0m[2m=[0m7534 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:43:45.714541Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m2.3915724754333496 [3mram_mb[0m[2m=[0m7490 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:43:50.714490Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m4.906615734100342 [3mram_mb[0m[2m=[0m7388 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:43:55.714507Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m2.2089996337890625 [3mram_mb[0m[2m=[0m7397 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:44:00.714430Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m1.70526921749115 [3mram_mb[0m[2m=[0m7349 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:44:05.714385Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m1.813551902770996 [3mram_mb[0m[2m=[0m7352 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:44:10.714599Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m2.2971739768981934 [3mram_mb[0m[2m=[0m7329 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:44:15.714759Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m1.7580711841583252 [3mram_mb[0m[2m=[0m7619 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:44:20.714742Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m2.2250070571899414 [3mram_mb[0m[2m=[0m7618 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:44:25.714685Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m1.8627303838729858 [3mram_mb[0m[2m=[0m7626 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:44:30.714590Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m2.2480852603912354 [3mram_mb[0m[2m=[0m7608 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:44:35.714911Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m1.8542454242706299 [3mram_mb[0m[2m=[0m7606 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:44:40.714981Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m3.4221019744873047 [3mram_mb[0m[2m=[0m7343 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:44:45.714569Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m3.2725601196289063 [3mram_mb[0m[2m=[0m7365 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:44:50.714400Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m2.8632891178131104 [3mram_mb[0m[2m=[0m7338 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:44:55.714540Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m1.36442232131958 [3mram_mb[0m[2m=[0m7339 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:45:00.714943Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m28.908100128173828 [3mram_mb[0m[2m=[0m8594 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:45:05.714556Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m24.210556030273438 [3mram_mb[0m[2m=[0m7559 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:45:10.714387Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m1.5263844728469849 [3mram_mb[0m[2m=[0m7459 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:45:15.714285Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m2.144559144973755 [3mram_mb[0m[2m=[0m7446 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:45:20.714055Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m1.6241413354873657 [3mram_mb[0m[2m=[0m7420 [3mactive_tasks[0m[2m=[0m0
+[2m2025-12-20T06:45:25.714225Z[0m [32m INFO[0m [2mmaster::grpc[0m[2m:[0m Heartbeat received [3mworker_id[0m[2m=[0m1d2cb734-de76-4af8-b6ff-f00441403fe5 [3mcpu_load[0m[2m=[0m1.1542656421661377 [3mram_mb[0m[2m=[0m7383 [3mactive_tasks[0m[2m=[0m0

@@ -12,10 +12,13 @@ use common::scheduler::{
     BatchExecutionResult, CompileResult, ResourceMetrics, TestCase, TestCaseResult,
 };
 use futures::StreamExt;
+use serde::Deserialize;
 use std::time::{Duration, Instant};
 use tokio::time::timeout;
 
 use crate::config::WorkerConfig;
+
+const RUNNER_SOURCE: &str = include_str!("runner_code.rs");
 
 /// Docker executor for sandboxed code execution
 pub struct DockerExecutor {
@@ -25,6 +28,22 @@ pub struct DockerExecutor {
 
 impl DockerExecutor {
     pub fn new(config: WorkerConfig) -> Result<Self, bollard::errors::Error> {
+        // Ensure runner is built
+        let runner_path = std::path::Path::new("/tmp/turbo_runner");
+        if !runner_path.exists() {
+             tracing::info!("Compiling turbo_runner...");
+             std::fs::write("/tmp/runner.rs", RUNNER_SOURCE).expect("Failed to write runner source");
+             let status = std::process::Command::new("rustc")
+                 .args(&["-C", "target-feature=+crt-static", "-O", "/tmp/runner.rs", "-o", "/tmp/turbo_runner"])
+                 .status()
+                 .expect("Failed to execute rustc");
+             if !status.success() {
+                 tracing::error!("Failed to compile runner");
+             } else {
+                 tracing::info!("turbo_runner compiled successfully");
+             }
+        }
+
         let docker = Docker::connect_with_local_defaults()?;
         Ok(Self { docker, config })
     }
@@ -160,8 +179,9 @@ impl DockerExecutor {
         }
 
         // Execute compile command
+        // Limit compile output to 1MB
         let exec_result = self
-            .exec_in_container(&container_name, &compile_cmd, self.config.compile_timeout)
+            .exec_in_container(&container_name, &compile_cmd, self.config.compile_timeout, 1024 * 1024)
             .await;
 
         let (success, compiler_output) = match exec_result {
@@ -210,8 +230,7 @@ impl DockerExecutor {
         memory_limit_mb: u32,
     ) -> BatchExecutionResult {
         let mut results = Vec::new();
-        let peak_ram: u64 = 0;
-        let mut total_cpu_time: u64 = 0;
+        let total_cpu_time: u64 = 0;
 
         let is_interpreted = matches!(
             language.to_lowercase().as_str(),
@@ -219,7 +238,7 @@ impl DockerExecutor {
         );
         let is_java = matches!(language.to_lowercase().as_str(), "java");
 
-        // Create container logic (same as before)
+        // Create container logic
         let container_name = format!("run_{}_{}", job_id.replace('-', "_"), batch_id);
         let image = if is_java {
             "eclipse-temurin:25"
@@ -241,14 +260,13 @@ impl DockerExecutor {
                 memory: Some((memory_limit_mb as i64) * 1024 * 1024),
                 nano_cpus: Some(self.config.execute_cpu_nano),
                 network_mode: Some("none".to_string()),
-                pids_limit: Some(100), // Increased for shell loop
+                pids_limit: Some(100),
                 readonly_rootfs: Some(false),
                 ..Default::default()
             }),
             ..Default::default()
         };
 
-        // Create and start container
         if let Err(e) = self.docker.create_container(Some(CreateContainerOptions{name: container_name.clone(), platform: None}), config).await {
               return BatchExecutionResult { job_id: job_id.to_string(), batch_id: batch_id.to_string(), worker_id: worker_id.to_string(), results: vec![], metrics: None, system_error: format!("Failed to create container: {}", e) };
         }
@@ -257,7 +275,7 @@ impl DockerExecutor {
               return BatchExecutionResult { job_id: job_id.to_string(), batch_id: batch_id.to_string(), worker_id: worker_id.to_string(), results: vec![], metrics: None, system_error: format!("Failed to start container: {}", e) };
         }
 
-        // Upload executable/source (same as before)
+        // Upload executable/source
         if is_interpreted {
             if let Some(src) = source_code {
                 let (filename, _) = match language.to_lowercase().as_str() {
@@ -272,16 +290,24 @@ impl DockerExecutor {
         } else if let Some(bin) = binary {
             if is_java {
                  let _ = self.docker.upload_to_container(&container_name, Some(UploadToContainerOptions { path: "/tmp", ..Default::default() }), bin.to_vec().into()).await;
-                 let _ = self.exec_in_container(&container_name, "mkdir -p /tmp/classes && cd /tmp && tar -xf /tmp/java_bundle.tar && chmod +x /tmp/main", Duration::from_secs(10)).await;
+                 let _ = self.exec_in_container(&container_name, "mkdir -p /tmp/classes && cd /tmp && tar -xf /tmp/java_bundle.tar && chmod +x /tmp/main", Duration::from_secs(10), 1024 * 1024).await;
             } else {
                  let tar_data = create_tar_archive_executable("main", bin);
                  let _ = self.docker.upload_to_container(&container_name, Some(UploadToContainerOptions { path: "/tmp", ..Default::default() }), tar_data.into()).await;
-                 let _ = self.exec_in_container(&container_name, "chmod +x /tmp/main", Duration::from_secs(5)).await;
+                 let _ = self.exec_in_container(&container_name, "chmod +x /tmp/main", Duration::from_secs(5), 1024 * 1024).await;
             }
         }
 
+        // Upload Runner
+        if let Ok(runner_bin) = std::fs::read("/tmp/turbo_runner") {
+             let _ = self.docker.upload_to_container(&container_name, Some(UploadToContainerOptions { path: "/tmp", ..Default::default() }), create_tar_archive_executable("runner", &runner_bin).into()).await;
+             let _ = self.exec_in_container(&container_name, "chmod +x /tmp/runner", Duration::from_secs(5), 1024 * 1024).await;
+        } else {
+             let _ = self.cleanup_container(&container_name).await;
+             return BatchExecutionResult { job_id: job_id.to_string(), batch_id: batch_id.to_string(), worker_id: worker_id.to_string(), results: vec![], metrics: None, system_error: "Runner binary missing on host".to_string() };
+        }
+
         // Prepare inputs
-        // We create a tar with a directory 'inputs/' containing input_0, input_1, etc.
         let mut inputs_archive = Vec::new();
         {
             let mut builder = tar::Builder::new(&mut inputs_archive);
@@ -298,7 +324,7 @@ impl DockerExecutor {
         let _ = self.docker.upload_to_container(&container_name, Some(UploadToContainerOptions { path: "/tmp", ..Default::default() }), inputs_archive.into()).await;
 
         // Construct command to run all tests
-        let exec_cmd = if is_java { "java -cp /tmp Main" } else if is_interpreted {
+        let target_cmd = if is_java { "java -cp /tmp Main" } else if is_interpreted {
             match language.to_lowercase().as_str() {
                 "python" | "python3" => "python /tmp/main.py",
                 "javascript" | "js" | "node" => "node /tmp/main.js",
@@ -307,96 +333,73 @@ impl DockerExecutor {
             }
         } else { "/tmp/main" };
 
-        let timeout_s = (time_limit_ms as f64 / 1000.0).ceil() as u64;
-        
-        // Shell script to execute all
-        // We use 'timeout' command. Busybox timeout is present in alpine. Debian has coreutils.
-        // We output delimiters: >>>START:{idx}<<<\n{stdout}\n>>>END:{idx}<<<\n>>>STDERR:{idx}<<<\n{stderr}\n>>>EXIT:{idx}:{code}<<<
-        let script = format!(
-            r#"
-            for i in $(ls /tmp/inputs); do
-                echo ">>>START:$i<<<"
-                # Run with timeout. Input piped from file.
-                timeout {}s {} < /tmp/inputs/$i > /tmp/out.$i 2> /tmp/err.$i
-                EXIT_CODE=$?
-                cat /tmp/out.$i
-                echo ">>>END:$i<<<"
-                echo ">>>STDERR:$i<<<"
-                cat /tmp/err.$i
-                echo ">>>EXIT:$i:$EXIT_CODE<<<"
-            done
-            "#,
-            timeout_s + 1, // Add buffer
-            exec_cmd
-        );
-
-        // Execute huge batch script
-        // We give it plenty of time total: (time_limit * count) + overhead
-        let batch_timeout = Duration::from_millis(time_limit_ms as u64 * test_cases.len() as u64 + 5000);
-        let exec_res = self.exec_in_container(&container_name, &script, batch_timeout).await;
+        let runner_cmd = format!("/tmp/runner '{}' /tmp/inputs {}", target_cmd, time_limit_ms);
+        let batch_timeout = Duration::from_millis(time_limit_ms as u64 * test_cases.len() as u64 + 10000);
+        let exec_res = self.exec_in_container(&container_name, &runner_cmd, batch_timeout, 10 * 1024 * 1024).await;
 
         match exec_res {
             Ok((_, output)) => {
-                 // Parse output
-                 // This is simple string parsing.
-                 for (i, tc) in test_cases.iter().enumerate() {
-                      let start_tag = format!(">>>START:{}<<<", i);
-                      let end_tag = format!(">>>END:{}<<<", i);
-                      let stderr_tag = format!(">>>STDERR:{}<<<", i);
-                      let exit_tag = format!(">>>EXIT:{}:", i);
-                      
-                      if let (Some(s_idx), Some(e_idx)) = (output.find(&start_tag), output.find(&end_tag)) {
-                           let stdout_content = output[s_idx + start_tag.len()..e_idx].trim();
-                           
-                           // Find stderr
-                           let stderr_content = if let Some(se_idx) = output.find(&stderr_tag) {
-                                let after_stderr = &output[se_idx + stderr_tag.len()..];
-                                if let Some(exit_idx) = after_stderr.find(&format!(">>>EXIT:{}:", i)) {
-                                     after_stderr[..exit_idx].trim()
-                                } else { "" }
-                           } else { "" };
-                           
-                           // Find exit code
-                           let exit_code = if let Some(ext_idx) = output.find(&exit_tag) {
-                                let rem = &output[ext_idx + exit_tag.len()..];
-                                if let Some(end_marker) = rem.find("<<<") {
-                                    rem[..end_marker].parse::<i32>().unwrap_or(-1)
-                                } else { -1 }
-                           } else { -1 };
-                           
-                           let expected = tc.expected_output.trim();
-                           // Check status
-                           // timeout returns 124 or 143 usually
-                           let is_tle = exit_code == 124 || exit_code == 143; 
-                           // OOM detection is harder here but timeout usually covers it or 137 exit code from shell wrapper if killed?
-                           // Actually the wrapper `timeout` kills it.
-                           // We will assume 137 or Killed in stderr = MLE/OOM
-                           let is_oom = exit_code == 137 || stderr_content.contains("Killed");
-
-                           let status = if is_tle { "TLE" }
-                                        else if is_oom { "MLE" }
-                                        else if exit_code != 0 { "RE" }
-                                        else if stdout_content == expected { "PASSED" }
-                                        else { "FAILED" };
-
-                           results.push(TestCaseResult {
-                               test_id: tc.id.clone(),
-                               status: status.to_string(),
-                               stdout: stdout_content.to_string(),
-                               stderr: stderr_content.to_string(),
-                               time_ms: 0, // Hard to measure individually accurately in batch without sophisticated wrapper
-                               memory_bytes: 0,
-                           });
-
-                      } else {
-                           // Missing execution (maybe script crashed early?)
-                           results.push(TestCaseResult { test_id: tc.id.clone(), status: "SKIPPED".to_string(), stdout: "".to_string(), stderr: "Execution skipped".to_string(), time_ms: 0, memory_bytes: 0 });
+                 tracing::info!("RAW RUNNER OUTPUT: {}", output);
+                 let json_start = output.find('[');
+                 let json_end = output.rfind(']');
+                 
+                 if let (Some(s), Some(e)) = (json_start, json_end) {
+                      let json_str = &output[s..=e];
+                      #[derive(Deserialize)]
+                      struct RunnerResult {
+                          test_id: String,
+                          status: String,
+                          stdout: String,
+                          stderr: String,
+                          time_ms: i32,
+                          memory_bytes: i32,
                       }
+                      
+                      match serde_json::from_str::<Vec<RunnerResult>>(json_str) {
+                          Ok(parsed_results) => {
+                               for r in parsed_results {
+                                   let mut final_result = TestCaseResult {
+                                       test_id: r.test_id.clone(),
+                                       status: r.status,
+                                       stdout: r.stdout,
+                                       stderr: r.stderr,
+                                       time_ms: r.time_ms,
+                                       memory_bytes: r.memory_bytes,
+                                   };
+                                   
+                                   let idx = r.test_id.parse::<usize>().unwrap_or(0);
+                                   if let Some(tc) = test_cases.get(idx) {
+                                       final_result.test_id = tc.id.clone();
+                                       
+                                       if final_result.status == "OK" {
+                                            if final_result.stdout.trim() == tc.expected_output.trim() {
+                                                final_result.status = "PASSED".to_string();
+                                            } else {
+                                                final_result.status = "FAILED".to_string();
+                                            }
+                                       }
+                                   }
+                                   results.push(final_result);
+                               }
+                          }
+                          Err(e) => {
+                               tracing::error!("Failed to parse runner execution JSON: {}. Output: {}", e, json_str);
+                          }
+                      }
+                 } else {
+                      tracing::error!("No JSON output found from runner. Output: {}", output);
+                      return BatchExecutionResult { 
+                          job_id: job_id.to_string(), 
+                          batch_id: batch_id.to_string(), 
+                          worker_id: worker_id.to_string(), 
+                          results: vec![], 
+                          metrics: None, 
+                          system_error: format!("Runner failed to produce output. Raw: {}", output) 
+                      };
                  }
             }
             Err(e) => {
-                 // Whole batch failed
-                 return BatchExecutionResult { job_id: job_id.to_string(), batch_id: batch_id.to_string(), worker_id: worker_id.to_string(), results: vec![], metrics: None, system_error: format!("Batch execution failed: {}", e) };
+                  return BatchExecutionResult { job_id: job_id.to_string(), batch_id: batch_id.to_string(), worker_id: worker_id.to_string(), results: vec![], metrics: None, system_error: format!("Batch execution failed: {}", e) };
             }
         }
 
@@ -408,19 +411,20 @@ impl DockerExecutor {
             worker_id: worker_id.to_string(),
             results,
             metrics: Some(ResourceMetrics {
-                peak_ram_bytes: 0, // Not tracked in batch mode yet
+                peak_ram_bytes: 0, 
                 total_cpu_time_ms: total_cpu_time,
             }),
             system_error: String::new(),
         }
     }
 
-    /// Execute a command in a container with timeout
+    /// Execute a command in a container with timeout and output limit
     async fn exec_in_container(
         &self,
         container: &str,
         cmd: &str,
         timeout_duration: Duration,
+        max_output_bytes: usize,
     ) -> Result<(i64, String), String> {
         let exec = self
             .docker
@@ -440,10 +444,22 @@ impl DockerExecutor {
             match self.docker.start_exec(&exec.id, None).await {
                 Ok(StartExecResults::Attached { mut output, .. }) => {
                     let mut result = String::new();
+                    let mut truncated = false;
                     while let Some(chunk) = output.next().await {
                         if let Ok(msg) = chunk {
-                            result.push_str(&msg.to_string());
+                            let s = msg.to_string();
+                            if result.len() + s.len() > max_output_bytes {
+                                let remaining = max_output_bytes.saturating_sub(result.len());
+                                result.push_str(&s[..remaining]);
+                                truncated = true;
+                                break; 
+                            }
+                            result.push_str(&s);
                         }
+                    }
+
+                    if truncated {
+                       result.push_str("\n[Output Truncated due to size limit]");
                     }
 
                     // Get exit code
@@ -463,6 +479,7 @@ impl DockerExecutor {
     }
 
     /// Run a command with stdin input
+    #[allow(dead_code)]
     async fn run_with_input(
         &self,
         container: &str,
@@ -475,7 +492,7 @@ impl DockerExecutor {
         let full_cmd = format!("echo '{}' | {}", input_escaped, cmd);
 
         let (exit_code, output) = self
-            .exec_in_container(container, &full_cmd, timeout_duration)
+            .exec_in_container(container, &full_cmd, timeout_duration, 1024 * 1024)
             .await?;
 
         // Try to split stdout/stderr (simplified - real implementation would capture separately)
